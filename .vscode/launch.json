@@ -1,0 +1,41 @@
+// The format of this file is specified in https://probe.rs/docs/tools/vscode/#start-a-debug-session-with-minimum-configuration
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "preLaunchTask": "build",
+            "type": "probe-rs-debug",
+            "request": "launch",
+            "name": "robotic_arm",
+            "cwd": "${workspaceFolder}",
+            "chip": "rp2040",
+            // RP2040 doesn't support connectUnderReset
+            "connectUnderReset": false,
+            "speed": 4000,
+            "runtimeExecutable": "probe-rs-debugger",
+            "runtimeArgs": [
+                "debug"
+            ],
+            "flashingConfig": {
+                "flashingEnabled": true,
+                "resetAfterFlashing": true,
+                "haltAfterReset": true,
+            },
+            "coreConfigs": [
+                {
+                    "coreIndex": 0,
+                    "programBinary": "target/thumbv6m-none-eabi/debug/robotic_arm",
+                    "chip": "RP2040",
+                    "rttEnabled": true,
+                    "options": {
+                        "env": {
+                            "DEFMT_LOG": "debug"
+                        }
+                    },
+                }
+            ],
+            "consoleLogLevel": "Info", //Error, Warn, Info, Debug, Trace
+            "wireProtocol": "Swd"
+        }
+    ]
+}

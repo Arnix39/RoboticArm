@@ -1,92 +1,267 @@
-# RoboticArm
+# Project template for rp2040-hal
 
+This template is intended as a starting point for developing your own firmware based on the rp2040-hal.
 
+It includes all of the `knurling-rs` tooling as showcased in https://github.com/knurling-rs/app-template (`defmt`, `defmt-rtt`, `panic-probe`, `flip-link`) to make development as easy as possible.
 
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.com/arnixrobotix/roboticarm.git
-git branch -M main
-git push -uf origin main
+`probe-run` is configured as the default runner, so you can start your program as easy as
+```sh
+cargo run --release
 ```
 
-## Integrate with your tools
+If you aren't using a debugger (or want to use cargo-embed/probe-rs-debugger), check out [alternative runners](#alternative-runners) for other options
 
-- [ ] [Set up project integrations](https://gitlab.com/arnixrobotix/roboticarm/-/settings/integrations)
+<!-- TABLE OF CONTENTS -->
+<details open="open">
+  
+  <summary><h2 style="display: inline-block">Table of Contents</h2></summary>
+  <ol>
+    <li><a href="#markdown-header-requirements">Requirements</a></li>
+    <li><a href="#installation-of-development-dependencies">Installation of development dependencies</a></li>
+    <li><a href="#running">Running</a></li>
+    <li><a href="#alternative-runners">Alternative runners</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#code-of-conduct">Code of conduct</a></li>
+    <li><a href="#license">License</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ol>
+</details>
 
-## Collaborate with your team
+<!-- Requirements -->
+<details open="open">
+  <summary><h2 style="display: inline-block" id="requirements">Requirements</h2></summary>
+  
+- The standard Rust tooling (cargo, rustup) which you can install from https://rustup.rs/
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+- Toolchain support for the cortex-m0+ processors in the rp2040 (thumbv6m-none-eabi)
 
-## Test and Deploy
+- flip-link - this allows you to detect stack-overflows on the first core, which is the only supported target for now.
 
-Use the built-in continuous integration in GitLab.
+- probe-run. Upstream support for RP2040 was added with version 0.3.1.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+- A CMSIS-DAP probe. (J-Link and other probes will not work with probe-run)
 
-***
+  You can use a second Pico as a CMSIS-DAP debug probe by installing the following firmware on it:
+  https://github.com/majbthrd/DapperMime/releases/download/20210225/raspberry_pi_pico-DapperMime.uf2
 
-# Editing this README
+  More details on supported debug probes can be found in [debug_probes.md](debug_probes.md)
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+</details>
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+<!-- Installation of development dependencies -->
+<details open="open">
+  <summary><h2 style="display: inline-block" id="installation-of-development-dependencies">Installation of development dependencies</h2></summary>
 
-## Name
-Choose a self-explaining name for your project.
+```sh
+rustup target install thumbv6m-none-eabi
+cargo install flip-link
+# This is our suggested default 'runner'
+cargo install probe-run
+# If you want to use elf2uf2-rs instead of probe-run, instead do...
+cargo install elf2uf2-rs --locked
+```
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+</details>
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+<!-- Running -->
+<details open="open">
+  <summary><h2 style="display: inline-block" id="running">Running</h2></summary>
+  
+For a debug build
+```sh
+cargo run
+```
+For a release build
+```sh
+cargo run --release
+```
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+If you do not specify a DEFMT_LOG level, it will be set to `debug`.
+That means `println!("")`, `info!("")` and `debug!("")` statements will be printed.
+If you wish to override this, you can change it in `.cargo/config.toml` 
+```toml
+[env]
+DEFMT_LOG = "off"
+```
+You can also set this inline (on Linux/MacOS)  
+```sh
+DEFMT_LOG=trace cargo run
+```
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+or set the _environment variable_ so that it applies to every `cargo run` call that follows:
+#### Linux/MacOS/unix
+```sh
+export DEFMT_LOG=trace
+```
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+Setting the DEFMT_LOG level for the current session  
+for bash
+```sh
+export DEFMT_LOG=trace
+```
+
+#### Windows
+Windows users can only override DEFMT_LOG through `config.toml`
+or by setting the environment variable as a separate step before calling `cargo run`
+- cmd
+```cmd
+set DEFMT_LOG=trace
+```
+- powershell
+```ps1
+$Env:DEFMT_LOG = trace
+```
+
+```cmd
+cargo run
+```
+
+</details>
+<!-- ALTERNATIVE RUNNERS -->
+<details open="open">
+  <summary><h2 style="display: inline-block" id="alternative-runners">Alternative runners</h2></summary>
+
+If you don't have a debug probe or if you want to do interactive debugging you can set up an alternative runner for cargo.  
+
+Some of the options for your `runner` are listed below:
+
+* **cargo embed**  
+  *Step 1* - Install [`cargo embed`](https://github.com/probe-rs/cargo-embed):
+
+  ```console
+  $ cargo install cargo-embed
+  ```
+
+  *Step 2* - Make sure your .cargo/config contains the following
+
+  ```toml
+  [target.thumbv6m-none-eabi]
+  runner = "cargo embed"
+  ```
+
+  *Step 3* - Update settings in [Embed.toml](./Embed.toml)  
+  - The defaults are to flash, reset, and start a defmt logging session
+  You can find all the settings and their meanings [in the cargo-embed repo](https://github.com/probe-rs/cargo-embed/blob/master/src/config/default.toml)
+
+  *Step 4* - Use `cargo run`, which will compile the code and start the
+  specified 'runner'. As the 'runner' is cargo embed, it will flash the device
+  and start running immediately
+
+  ```console
+  $ cargo run --release
+  ```
+
+* **probe-rs-debugger**
+
+  *Step 1* - Download [`probe-rs-debugger VSCode plugin 0.4.0`](https://github.com/probe-rs/vscode/releases/download/v0.4.0/probe-rs-debugger-0.4.0.vsix)
+
+  *Step 2* - Install `probe-rs-debugger VSCode plugin`
+  ```console
+  $ code --install-extension probe-rs-debugger-0.4.0.vsix
+  ```
+
+  *Step 3* - Install `probe-rs-debugger`
+  ```console
+  $ cargo install probe-rs-debugger
+  ```
+
+  *Step 4* - Open this project in VSCode
+
+  *Step 5* - Launch a debug session by choosing `Run`>`Start Debugging` (or press F5)
+
+* **Loading a UF2 over USB**  
+  *Step 1* - Install [`elf2uf2-rs`](https://github.com/JoNil/elf2uf2-rs):
+
+  ```console
+  $ cargo install elf2uf2-rs --locked
+  ```
+
+  *Step 2* - Make sure your .cargo/config contains the following
+
+  ```toml
+  [target.thumbv6m-none-eabi]
+  runner = "elf2uf2-rs -d"
+  ```
+
+  The `thumbv6m-none-eabi` target may be replaced by the all-Arm wildcard
+  `'cfg(all(target_arch = "arm", target_os = "none"))'`.
+
+  *Step 3* - Boot your RP2040 into "USB Bootloader mode", typically by rebooting
+  whilst holding some kind of "Boot Select" button. On Linux, you will also need
+  to 'mount' the device, like you would a USB Thumb Drive.
+
+  *Step 4* - Use `cargo run`, which will compile the code and start the
+  specified 'runner'. As the 'runner' is the elf2uf2-rs tool, it will build a UF2
+  file and copy it to your RP2040.
+
+  ```console
+  $ cargo run --release
+  ```
+
+* **Loading with picotool**  
+  As ELF files produced by compiling Rust code are completely compatible with ELF
+  files produced by compiling C or C++ code, you can also use the Raspberry Pi
+  tool [picotool](https://github.com/raspberrypi/picotool). The only thing to be
+  aware of is that picotool expects your ELF files to have a `.elf` extension, and
+  by default Rust does not give the ELF files any extension. You can fix this by
+  simply renaming the file.
+
+  This means you can't easily use it as a cargo runner - yet.
+
+  Also of note is that the special
+  [pico-sdk](https://github.com/raspberrypi/pico-sdk) macros which hide
+  information in the ELF file in a way that `picotool info` can read it out, are
+  not supported in Rust. An alternative is TBC.
+
+</details>
+
+<!-- ROADMAP -->
 
 ## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+
+NOTE These packages are under active development. As such, it is likely to
+remain volatile until a 1.0.0 release.
+
+See the [open issues](https://github.com/rp-rs/rp2040-project-template/issues) for a list of
+proposed features (and known issues).
 
 ## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+The steps are:
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+1. Fork the Project by clicking the 'Fork' button at the top of the page.
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Make some changes to the code or documentation.
+4. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+5. Push to the Feature Branch (`git push origin feature/AmazingFeature`)
+6. Create a [New Pull Request](https://github.com/rp-rs/rp-hal/pulls)
+7. An admin will review the Pull Request and discuss any changes that may be required.
+8. Once everyone is happy, the Pull Request can be merged by an admin, and your work is part of our project!
+
+## Code of Conduct
+
+Contribution to this crate is organized under the terms of the [Rust Code of
+Conduct][CoC], and the maintainer of this crate, the [rp-rs team], promises
+to intervene to uphold that code of conduct.
+
+[CoC]: CODE_OF_CONDUCT.md
+[rp-rs team]: https://github.com/orgs/rp-rs/teams/rp-rs
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+The contents of this repository are dual-licensed under the _MIT OR Apache
+2.0_ License. That means you can chose either the MIT licence or the
+Apache-2.0 licence when you re-use this code. See `MIT` or `APACHE2.0` for more
+information on each specific licence.
+
+Any submissions to this project (e.g. as Pull Requests) must be made available
+under these terms.
+
+## Contact
+
+Raise an issue: [https://github.com/rp-rs/rp2040-project-template/issues](https://github.com/rp-rs/rp2040-project-template/issues)
+Chat to us on Matrix: [#rp-rs:matrix.org](https://matrix.to/#/#rp-rs:matrix.org)
