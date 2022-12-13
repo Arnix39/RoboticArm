@@ -1,6 +1,4 @@
-//! Blinks a LED on a Maker Pi RP2040
-//!
-//! This will blink the LED attached to GPIO0.
+//! Control a continous rotation servo with a Maker Pi RP2040
 #![no_std]
 #![no_main]
 
@@ -11,6 +9,7 @@ use defmt_rtt as _;
 
 // GPIO traits
 use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::PwmPin;
 
 use panic_probe as _;
 
@@ -74,15 +73,41 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    let mut led_pin = pins.grove_1_a.into_push_pull_output();
+    // Init PWMs
+    let mut pwm_slices = hal::pwm::Slices::new(pac.PWM, &mut pac.RESETS);
+
+    // Configure GPIO0 status led
+    let led_pin = &mut pins.grove_1_a.into_push_pull_output();
+
+    // Configure PWM7
+    let pwm = &mut pwm_slices.pwm7;
+    pwm.set_ph_correct();
+    pwm.set_div_int(20u8); // 50 hz
+    pwm.enable();
+
+    // Output channel B on PWM7 to the servo_4 pin
+    let channel = &mut pwm.channel_b;
+    channel.output_to(pins.servo_4);
+
+    info!("Stop!");
+    channel.set_duty(4645); /* Counter clockwise limit: 4815, Clockwise limit: 4475 */
+    delay.delay_ms(1000);
 
     loop {
-        info!("on!");
-        led_pin.set_high().unwrap();
-        delay.delay_ms(500);
-        info!("off!");
+        info!("Counter Clockwise!");
         led_pin.set_low().unwrap();
-        delay.delay_ms(500);
+        channel.set_duty(5500);
+        delay.delay_ms(100);
+        info!("Stop!");
+        channel.set_duty(4645);
+        delay.delay_ms(1000);
+        info!("Clockwise!");
+        led_pin.set_high().unwrap();
+        channel.set_duty(3500);
+        delay.delay_ms(100);
+        info!("Stop!");
+        channel.set_duty(4645);
+        delay.delay_ms(1000);
     }
 }
 
