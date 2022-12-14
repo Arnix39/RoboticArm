@@ -1,0 +1,36 @@
+##########################################################
+## 	      		Maker Pi board		      	##
+##########################################################
+
+Port    	GPIO	Function		Color
+
+Grove 1 	0	Clock MPU6050		white
+Grove 1		1	Data MPU6050		yellow
+Grove 2		2
+Grove 2		3
+Grove 3		4
+Grove 3		5
+Grove 5		6
+Grove 7		7
+Motor 1		8
+Motor 1		9
+Motor 2		10
+Motor 2		11
+Servo		12	PWM gripper servo	orange
+Servo		13	PWM left servo		orange
+Servo		14	PWM right servo		orange
+Serv		15	PWM rotation servo	orange
+Grove 4		16
+Grove 4		17
+LEDs		18
+        	19
+Button 1	20
+Button 2	21
+Buzzer        	22
+        	23
+        	24
+        	25
+Grove 5/6	26
+Grove 6       	27
+Grove 7     	28
+        	29
