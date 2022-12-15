@@ -8,8 +8,10 @@ use defmt::*;
 use defmt_rtt as _;
 
 // GPIO traits
-use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::blocking::i2c::Write;
+// use embedded_hal::digital::v2::OutputPin;
 use embedded_hal::PwmPin;
+use fugit::RateExtU32;
 
 use panic_probe as _;
 
@@ -58,8 +60,7 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    // The delay object lets us wait for specified amounts of time (in
-    // milliseconds)
+    // The delay object lets us wait for specified amounts of time (in milliseconds)
     let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // The single-cycle I/O block controls our GPIO pins
@@ -76,8 +77,24 @@ fn main() -> ! {
     // Init PWMs
     let mut pwm_slices = hal::pwm::Slices::new(pac.PWM, &mut pac.RESETS);
 
-    // Configure GPIO0 status led
-    let led_pin = &mut pins.grove_1_a.into_push_pull_output();
+    // Configure two pins as being I²C, not GPIO
+    let sda_pin = pins.grove_1_a.into_mode::<hal::gpio::FunctionI2C>();
+    let scl_pin = pins.grove_1_b.into_mode::<hal::gpio::FunctionI2C>();
+
+    // Create the I²C drive, using the two pre-configured pins. This will fail
+    // at compile time if the pins are in the wrong mode, or if this I²C
+    // peripheral isn't available on these pins!
+    let mut i2c = hal::I2C::i2c0(
+        pac.I2C0,
+        sda_pin,
+        scl_pin,
+        400.kHz(),
+        &mut pac.RESETS,
+        &clocks.system_clock,
+    );
+
+    // Write three bytes to the I²C device with 7-bit address 0x2C
+    i2c.write(0x2c, &[1, 2, 3]).unwrap();
 
     // Configure PWM7
     let pwm = &mut pwm_slices.pwm7;
@@ -95,14 +112,12 @@ fn main() -> ! {
 
     loop {
         info!("Counter Clockwise!");
-        led_pin.set_low().unwrap();
         channel.set_duty(5500);
         delay.delay_ms(100);
         info!("Stop!");
         channel.set_duty(4645);
         delay.delay_ms(1000);
         info!("Clockwise!");
-        led_pin.set_high().unwrap();
         channel.set_duty(3500);
         delay.delay_ms(100);
         info!("Stop!");

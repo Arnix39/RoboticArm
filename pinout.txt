@@ -4,8 +4,8 @@
 
 Port    	GPIO	Function		Color
 
-Grove 1 	0	Clock MPU6050		white
-Grove 1		1	Data MPU6050		yellow
+Grove 1 	0	Data MPU6050		yellow
+Grove 1		1	Clock MPU6050		white
 Grove 2		2
 Grove 2		3
 Grove 3		4
