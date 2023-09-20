@@ -1,0 +1,74 @@
+---
+kind: pipeline
+type: docker
+name: Target build
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: Build
+  image: rust:latest
+
+  commands:
+    - rustup target add thumbv6m-none-eabi
+    - cd workspace
+    - cargo install flip-link 
+    - cargo build
+
+- name: Upload binaries
+  image: plugins/artifactory
+  settings:
+    url: http://192.168.1.252/artifactory
+    username:
+      from_secret: ARTIFACTORY_USERNAME
+    password:
+      from_secret: ARTIFACTORY_PASSWORD
+    source: workspace/target/thumbv6m-none-eabi/debug/robotic_arm
+    target: Robotic_Arm/binaries/development/build_$${DRONE_BUILD_NUMBER}_binary
+    insecure: true
+  depends_on:
+    - Build
+
+trigger:
+  event:
+    exclude:
+    - promote
+
+---
+kind: pipeline
+type: docker
+name: Deploy
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: Build
+  image: rust:latest
+
+  commands:
+    - rustup target add thumbv6m-none-eabi
+    - cd workspace
+    - cargo build --release
+
+- name: Upload binaries
+  image: plugins/artifactory
+  settings:
+    url: http://192.168.1.252/artifactory
+    username:
+      from_secret: ARTIFACTORY_USERNAME
+    password:
+      from_secret: ARTIFACTORY_PASSWORD
+    source: workspace/target/thumbv6m-none-eabi/release/robotic_arm
+    target: Robotic_Arm/binaries/deployment/build_$${DRONE_BUILD_NUMBER}_binary
+    flat: true
+    insecure: true
+  depends_on:
+    - Build
+
+trigger:
+  event:
+  - promote
+  target:
+  - RoboticArm

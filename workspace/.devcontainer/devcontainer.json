@@ -23,5 +23,5 @@
     "mounts": [
         "source=/dev/bus/usb,target=/dev/bus/usb,type=bind"
     ],
-    "postCreateCommand": "bash /home/workspace/.devcontainer/postCreate.bash"
+    "postStartCommand": "bash /home/workspace/.devcontainer/postStart.bash"
 }

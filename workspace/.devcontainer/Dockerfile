@@ -29,6 +29,5 @@ RUN rustup target add thumbv6m-none-eabi
 RUN cargo install flip-link
 RUN cargo install probe-rs --features cli
 RUN cargo install probe-run
-# RUN sudo chmod -R ug+rwx /usr/local/cargo
 
 CMD ["/bin/bash"]
