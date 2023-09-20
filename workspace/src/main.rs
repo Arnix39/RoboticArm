@@ -8,7 +8,7 @@ use defmt::*;
 use defmt_rtt as _;
 
 // GPIO traits
-use embedded_hal::blocking::i2c::Write;
+// use embedded_hal::blocking::i2c::Write;
 // use embedded_hal::digital::v2::OutputPin;
 use embedded_hal::PwmPin;
 use fugit::RateExtU32;
@@ -84,7 +84,7 @@ fn main() -> ! {
     // Create the I²C drive, using the two pre-configured pins. This will fail
     // at compile time if the pins are in the wrong mode, or if this I²C
     // peripheral isn't available on these pins!
-    let mut i2c = hal::I2C::i2c0(
+    let _i2c = hal::I2C::i2c0(
         pac.I2C0,
         sda_pin,
         scl_pin,
@@ -94,7 +94,13 @@ fn main() -> ! {
     );
 
     // Write three bytes to the I²C device with 7-bit address 0x2C
-    i2c.write(0x2c, &[1, 2, 3]).unwrap();
+    // i2c.write(0x2c, &[1, 2, 3]).unwrap();
+
+    // Configure PWM7
+    let pwm_pinch = &mut pwm_slices.pwm6;
+    pwm_pinch.set_ph_correct();
+    pwm_pinch.set_div_int(20u8); // 50 hz
+    pwm_pinch.enable();
 
     // Configure PWM7
     let pwm = &mut pwm_slices.pwm7;
@@ -106,12 +112,16 @@ fn main() -> ! {
     let channel = &mut pwm.channel_b;
     channel.output_to(pins.servo_4);
 
-    info!("Stop!");
+    // Output channel A on PWM6 to the servo_1 pin
+    let channel_pinch = &mut pwm_pinch.channel_a;
+    channel_pinch.output_to(pins.servo_1);
+
+    /*info!("Stop!");
     channel.set_duty(4645); /* Counter clockwise limit: 4815, Clockwise limit: 4475 */
-    delay.delay_ms(1000);
+    delay.delay_ms(1000);*/
 
     loop {
-        info!("Counter Clockwise!");
+        /*info!("Counter Clockwise!");
         channel.set_duty(5500);
         delay.delay_ms(100);
         info!("Stop!");
@@ -122,6 +132,12 @@ fn main() -> ! {
         delay.delay_ms(100);
         info!("Stop!");
         channel.set_duty(4645);
+        delay.delay_ms(1000);*/
+        info!("Open!");
+        channel_pinch.set_duty(5500);
+        delay.delay_ms(1000);
+        info!("Close!");
+        channel_pinch.set_duty(2350);
         delay.delay_ms(1000);
     }
 }
