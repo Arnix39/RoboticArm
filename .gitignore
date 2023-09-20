@@ -12,4 +12,3 @@ workspace/.vscode/*
 !workspace/.vscode/tasks.json
 !workspace/.vscode/extensions.json
 !workspace/.vscode/settings.json
-!workspace/.vscode/*.code-workspace
