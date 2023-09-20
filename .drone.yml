@@ -50,6 +50,7 @@ steps:
   commands:
     - rustup target add thumbv6m-none-eabi
     - cd workspace
+    - cargo install flip-link 
     - cargo build --release
 
 - name: Upload binaries
