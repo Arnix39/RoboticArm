@@ -7,14 +7,23 @@ platform:
   arch: amd64
 
 steps:
-- name: Build
+- name: Tests
+  image: rust:latest
+
+  commands:
+    - cd workspace
+    - cargo test
+
+- name: Target build
   image: rust:latest
 
   commands:
     - rustup target add thumbv6m-none-eabi
-    - cd workspace
+    - cd workspace/cross_compile
     - cargo install flip-link 
     - cargo build
+  depends_on:
+    - Tests
 
 - name: Upload binaries
   image: plugins/artifactory
@@ -24,11 +33,11 @@ steps:
       from_secret: ARTIFACTORY_USERNAME
     password:
       from_secret: ARTIFACTORY_PASSWORD
-    source: workspace/target/thumbv6m-none-eabi/debug/robotic_arm
+    source: workspace/cross_compile/target/thumbv6m-none-eabi/debug/robotic_arm
     target: Robotic_Arm/binaries/development/build_$${DRONE_BUILD_NUMBER}_binary
     insecure: true
   depends_on:
-    - Build
+    - Target build
 
 trigger:
   event:
@@ -49,7 +58,7 @@ steps:
 
   commands:
     - rustup target add thumbv6m-none-eabi
-    - cd workspace
+    - cd workspace/cross_compile
     - cargo install flip-link 
     - cargo build --release
 
@@ -61,7 +70,7 @@ steps:
       from_secret: ARTIFACTORY_USERNAME
     password:
       from_secret: ARTIFACTORY_PASSWORD
-    source: workspace/target/thumbv6m-none-eabi/release/robotic_arm
+    source: workspace/cross_compile/target/thumbv6m-none-eabi/release/robotic_arm
     target: Robotic_Arm/binaries/deployment/build_$${DRONE_BUILD_NUMBER}_binary
     flat: true
     insecure: true

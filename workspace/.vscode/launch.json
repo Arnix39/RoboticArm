@@ -3,7 +3,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "preLaunchTask": "build",
+            "preLaunchTask": "Target build",
             "type": "probe-rs-debug",
             "request": "launch",
             "name": "robotic_arm",
@@ -24,7 +24,7 @@
             "coreConfigs": [
                 {
                     "coreIndex": 0,
-                    "programBinary": "target/thumbv6m-none-eabi/debug/robotic_arm",
+                    "programBinary": "cross_compile/target/thumbv6m-none-eabi/debug/robotic_arm",
                     "chip": "RP2040",
                     "rttEnabled": true,
                     "options": {

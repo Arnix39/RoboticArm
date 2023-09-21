@@ -1,8 +1,8 @@
 workspace/**/*.rs.bk
 workspace/.#*
 workspace/.gdb_history
-workspace/Cargo.lock
-workspace/target/
+workspace/**/Cargo.lock
+workspace/**/target/
 
 # editor files
 workspace/.vscode/*
