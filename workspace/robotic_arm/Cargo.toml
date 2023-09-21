@@ -1,6 +1,6 @@
 [workspace]
 members = [
-  "robotic_arm"
+  "control"
 ]
 
 resolver = "2"

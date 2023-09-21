@@ -33,7 +33,7 @@ steps:
 
   commands:
     - rustup target add thumbv6m-none-eabi
-    - cd workspace/cross_compile
+    - cd workspace/robotic_arm
     - cargo install flip-link 
     - cargo build
 
@@ -45,7 +45,7 @@ steps:
       from_secret: ARTIFACTORY_USERNAME
     password:
       from_secret: ARTIFACTORY_PASSWORD
-    source: workspace/cross_compile/target/thumbv6m-none-eabi/debug/robotic_arm
+    source: workspace/robotic_arm/target/thumbv6m-none-eabi/debug/robotic_arm_control
     target: Robotic_Arm/binaries/development/build_$${DRONE_BUILD_NUMBER}_binary
     insecure: true
   depends_on:
@@ -70,7 +70,7 @@ steps:
 
   commands:
     - rustup target add thumbv6m-none-eabi
-    - cd workspace/cross_compile
+    - cd workspace/robotic_arm
     - cargo install flip-link 
     - cargo build --release
 
@@ -82,7 +82,7 @@ steps:
       from_secret: ARTIFACTORY_USERNAME
     password:
       from_secret: ARTIFACTORY_PASSWORD
-    source: workspace/cross_compile/target/thumbv6m-none-eabi/release/robotic_arm
+    source: workspace/robotic_arm/target/thumbv6m-none-eabi/release/robotic_arm_control
     target: Robotic_Arm/binaries/deployment/build_$${DRONE_BUILD_NUMBER}_binary
     flat: true
     insecure: true

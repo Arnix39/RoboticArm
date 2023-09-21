@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-name = "robotic_arm"
+name = "robotic_arm_control"
 version = "0.1.0"
 
 [dependencies]

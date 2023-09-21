@@ -24,7 +24,7 @@
             "coreConfigs": [
                 {
                     "coreIndex": 0,
-                    "programBinary": "cross_compile/target/thumbv6m-none-eabi/debug/robotic_arm",
+                    "programBinary": "robotic_arm/target/thumbv6m-none-eabi/debug/robotic_arm_control",
                     "chip": "RP2040",
                     "rttEnabled": true,
                     "options": {

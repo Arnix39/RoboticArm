@@ -2,9 +2,9 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Target build",
+            "label": "Target: Build",
             "options": {
-                "cwd": "${workspaceFolder}/cross_compile"
+                "cwd": "${workspaceFolder}/robotic_arm"
             },
             "command": "cargo",
             "args": [
@@ -32,9 +32,9 @@
             ]
         },
         {
-            "label": "Target clean",
+            "label": "Target: Clean",
             "options": {
-                "cwd": "${workspaceFolder}/cross_compile"
+                "cwd": "${workspaceFolder}/robotic_arm"
             },
             "command": "cargo",
             "args": [
@@ -46,9 +46,9 @@
             "problemMatcher": []
         },
         {
-            "label": "Target run",
+            "label": "Target: Run",
             "options": {
-                "cwd": "${workspaceFolder}/cross_compile"
+                "cwd": "${workspaceFolder}/robotic_arm"
             },
             "command": "cargo",
             "args": [
@@ -83,7 +83,7 @@
             ]
         },
         {
-            "label": "Host test",
+            "label": "Host: Test",
             "args": [
                 "test"
             ],
@@ -130,7 +130,7 @@
             ]
         },
         {
-            "label": "Host clean",
+            "label": "Host: Clean",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
