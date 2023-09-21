@@ -1,7 +1,7 @@
 ---
 kind: pipeline
 type: docker
-name: Target build
+name: Host tests
 platform:
   os: linux
   arch: amd64
@@ -14,7 +14,21 @@ steps:
     - cd workspace
     - cargo test
 
-- name: Target build
+trigger:
+  event:
+    exclude:
+    - promote
+
+---
+kind: pipeline
+type: docker
+name: Target build
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: Build
   image: rust:latest
 
   commands:
@@ -22,8 +36,6 @@ steps:
     - cd workspace/cross_compile
     - cargo install flip-link 
     - cargo build
-  depends_on:
-    - Tests
 
 - name: Upload binaries
   image: plugins/artifactory
@@ -37,7 +49,7 @@ steps:
     target: Robotic_Arm/binaries/development/build_$${DRONE_BUILD_NUMBER}_binary
     insecure: true
   depends_on:
-    - Target build
+    - Build
 
 trigger:
   event:
