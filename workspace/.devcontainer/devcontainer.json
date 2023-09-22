@@ -13,15 +13,23 @@
     "customizations": {
         "vscode": {
             "extensions": [
+                "rust-lang.rust-analyzer",
                 "probe-rs.probe-rs-debugger",
-                "twxs.cmake",
-                "donjayamanne.python-extension-pack",
                 "vscode-icons-team.vscode-icons"
             ]
         }
     },
     "mounts": [
-        "source=/dev/bus/usb,target=/dev/bus/usb,type=bind"
+        {
+            "source": "/dev/bus/usb",
+            "target": "/dev/bus/usb",
+            "type": "bind"
+        },
+        {
+            "source": "devcontainer-cargo-cache-${devcontainerId}",
+            "target": "/usr/local/cargo",
+            "type": "volume"
+        }
     ],
     "postStartCommand": "bash /home/workspace/.devcontainer/postStart.bash"
 }
