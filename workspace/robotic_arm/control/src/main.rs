@@ -33,9 +33,6 @@ use bsp::hal;
 ///
 /// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
 /// as soon as all global variables are initialised.
-///
-/// The function configures the RP2040 peripherals, then blinks the LED in an
-/// infinite loop.
 #[entry]
 fn main() -> ! {
     // Grab our singleton objects

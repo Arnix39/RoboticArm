@@ -2,7 +2,6 @@
 members = [
   "control"
 ]
-
 resolver = "2"
 
 # cargo build/run
