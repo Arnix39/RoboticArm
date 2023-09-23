@@ -26,8 +26,10 @@ ENV SHELL /bin/bash
 USER $USERNAME
 
 RUN rustup target add thumbv6m-none-eabi
+RUN rustup component add llvm-tools-preview
 RUN cargo install flip-link
 RUN cargo install probe-rs --features cli
 RUN cargo install probe-run
+RUN cargo install cargo-binutils
 
 CMD ["/bin/bash"]
