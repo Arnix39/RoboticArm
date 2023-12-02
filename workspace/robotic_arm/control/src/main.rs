@@ -2,140 +2,258 @@
 #![no_std]
 #![no_main]
 
-// The macro for our start-up function
-use cortex_m_rt::entry;
-use defmt::*;
-use defmt_rtt as _;
-
-// GPIO traits
-// use embedded_hal::blocking::i2c::Write;
-// use embedded_hal::digital::v2::OutputPin;
-use embedded_hal::PwmPin;
-use fugit::RateExtU32;
+use defmt_brtt as _; // global logger
 
 use panic_probe as _;
 
-// Make an alias for our board support package so copying examples to other boards is easier
-use cytron_maker_pi_rp2040 as bsp;
+use rp2040_monotonic::{
+    fugit::Duration,
+    fugit::RateExtU32, // For .kHz() conversion funcs
+    Rp2040Monotonic,
+};
 
 // Pull in any important traits
-use bsp::hal::prelude::*;
+use cytron_maker_pi_rp2040::{
+    XOSC_CRYSTAL_FREQ,
+    hal,
+    hal::{pac, I2C, gpio, pwm},
+    Pins
+};
 
-// A shorter alias for the Peripheral Access Crate, which provides low-level
-// register access
-use bsp::hal::pac;
+use core::mem::MaybeUninit;
 
-// A shorter alias for the Hardware Abstraction Layer, which provides
-// higher-level drivers.
-use bsp::hal;
+// GPIO traits
+use embedded_hal::PwmPin;
+// I2C traits
+use embedded_hal::blocking::i2c::Write;
 
-/// Entry point to our bare-metal application.
-///
-/// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
-/// as soon as all global variables are initialised.
-#[entry]
-fn main() -> ! {
-    // Grab our singleton objects
-    let mut pac = pac::Peripherals::take().unwrap();
-    let core = pac::CorePeripherals::take().unwrap();
+const MONO_NUM: u32 = 1;
+const MONO_DENOM: u32 = 1000000;
+const ONE_MSEC_TICKS: u64 = 1000;
 
-    // Set up the watchdog driver - needed by the clock setup code
-    let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
+type I2CBus = I2C<
+    pac::I2C0,
+    (
+        gpio::Pin<gpio::bank0::Gpio0, gpio::FunctionI2C, gpio::PullDown>,
+        gpio::Pin<gpio::bank0::Gpio1, gpio::FunctionI2C, gpio::PullDown>,
+    ),
+>;
 
-    // Configure the clocks
-    //
-    // The default is to generate a 125 MHz system clock
-    let clocks = hal::clocks::init_clocks_and_plls(
-        bsp::XOSC_CRYSTAL_FREQ,
-        pac.XOSC,
-        pac.CLOCKS,
-        pac.PLL_SYS,
-        pac.PLL_USB,
-        &mut pac.RESETS,
-        &mut watchdog,
-    )
-    .ok()
-    .unwrap();
+type BasePWMChannel = pwm::Channel<pwm::Slice<pwm::Pwm7, pwm::FreeRunning>, pwm::B>;
+type GripperPWMChannel = hal::pwm::Channel<pwm::Slice<pwm::Pwm6, pwm::FreeRunning>, hal::pwm::A>;
 
-    // The delay object lets us wait for specified amounts of time (in milliseconds)
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
+pub enum GripperState {
+    OPEN,
+    CLOSED,
+}
 
-    // The single-cycle I/O block controls our GPIO pins
-    let sio = hal::Sio::new(pac.SIO);
+pub enum RotationDirection {
+    CLOCKWISE,
+    COUNTERCLOCKWISE,
+    NONE,
+}
 
-    // Set the pins up according to their function on this particular board
-    let pins = bsp::Pins::new(
-        pac.IO_BANK0,
-        pac.PADS_BANK0,
-        sio.gpio_bank0,
-        &mut pac.RESETS,
-    );
+fn duration_in_ticks(ticks: u64) -> Duration::<u64, MONO_NUM, MONO_DENOM> {
+    Duration::<u64, MONO_NUM, MONO_DENOM>::from_ticks(ticks)
+}
 
-    // Init PWMs
-    let mut pwm_slices = hal::pwm::Slices::new(pac.PWM, &mut pac.RESETS);
+#[rtic::app(
+    device = cytron_maker_pi_rp2040::hal::pac,
+    peripherals = true,
+    dispatchers = [TIMER_IRQ_1, TIMER_IRQ_2],
+)]
+mod app {
+    use super::*;
 
-    // Configure two pins as being I²C, not GPIO
-    let sda_pin = pins.grove_1_a.into_mode::<hal::gpio::FunctionI2C>();
-    let scl_pin = pins.grove_1_b.into_mode::<hal::gpio::FunctionI2C>();
+    #[monotonic(binds = TIMER_IRQ_0, default = true)]
+    type Rp2040Mono = Rp2040Monotonic;
 
-    // Create the I²C drive, using the two pre-configured pins. This will fail
-    // at compile time if the pins are in the wrong mode, or if this I²C
-    // peripheral isn't available on these pins!
-    let _i2c = hal::I2C::i2c0(
-        pac.I2C0,
-        sda_pin,
-        scl_pin,
-        400.kHz(),
-        &mut pac.RESETS,
-        &clocks.system_clock,
-    );
+    #[shared]
+    struct Shared {
+        gripper_state: GripperState,
+        base_rotation: RotationDirection,
+    }
 
-    // Write three bytes to the I²C device with 7-bit address 0x2C
-    // i2c.write(0x2c, &[1, 2, 3]).unwrap();
+    #[local]
+    struct Local {
+        base: BasePWMChannel,
+        gripper: GripperPWMChannel,
+        i2c: &'static mut I2CBus,
+    }
 
-    // Configure PWM7
-    let pwm_pinch = &mut pwm_slices.pwm6;
-    pwm_pinch.set_ph_correct();
-    pwm_pinch.set_div_int(20u8); // 50 hz
-    pwm_pinch.enable();
+    #[init(local=[
+        // Task local initialized resources are static
+        // Here we use MaybeUninit to allow for initialization in init()
+        // This enables its usage in driver initialization
+        i2c_context: MaybeUninit<I2CBus> = MaybeUninit::uninit(),
+    ])]
+    fn init(context: init::Context) -> (Shared, Local, init::Monotonics) {
+        // Cortex-M peripherals
+        let _core: pac::CorePeripherals = context.core;
 
-    // Configure PWM7
-    let pwm = &mut pwm_slices.pwm7;
-    pwm.set_ph_correct();
-    pwm.set_div_int(20u8); // 50 hz
-    pwm.enable();
+        // Cytron board specific peripherals
+        let mut pac: pac::Peripherals = context.device;
 
-    // Output channel B on PWM7 to the servo_4 pin
-    let channel = &mut pwm.channel_b;
-    channel.output_to(pins.servo_4);
+        // Set up the watchdog driver - needed by the clock setup code
+        let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
 
-    // Output channel A on PWM6 to the servo_1 pin
-    let channel_pinch = &mut pwm_pinch.channel_a;
-    channel_pinch.output_to(pins.servo_1);
+        // Configure the clocks
+        let clocks = hal::clocks::init_clocks_and_plls(
+            XOSC_CRYSTAL_FREQ,
+            pac.XOSC,
+            pac.CLOCKS,
+            pac.PLL_SYS,
+            pac.PLL_USB,
+            &mut pac.RESETS,
+            &mut watchdog,
+        )
+        .ok()
+        .unwrap();
 
-    /*info!("Stop!");
-    channel.set_duty(4645); /* Counter clockwise limit: 4815, Clockwise limit: 4475 */
-    delay.delay_ms(1000);*/
+        // The single-cycle I/O block controls GPIO pins
+        let sio = hal::Sio::new(pac.SIO);
 
-    loop {
-        /*info!("Counter Clockwise!");
-        channel.set_duty(5500);
-        delay.delay_ms(100);
-        info!("Stop!");
-        channel.set_duty(4645);
-        delay.delay_ms(1000);
-        info!("Clockwise!");
-        channel.set_duty(3500);
-        delay.delay_ms(100);
-        info!("Stop!");
-        channel.set_duty(4645);
-        delay.delay_ms(1000);*/
-        info!("Open!");
-        channel_pinch.set_duty(5500);
-        delay.delay_ms(1000);
-        info!("Close!");
-        channel_pinch.set_duty(2350);
-        delay.delay_ms(1000);
+        // Set the pins up
+        let pins = Pins::new(
+            pac.IO_BANK0,
+            pac.PADS_BANK0,
+            sio.gpio_bank0,
+            &mut pac.RESETS,
+        );
+
+        // Init PWMs
+        let pwm_slices = pwm::Slices::new(pac.PWM, &mut pac.RESETS);
+
+        ///////////////////////////////////////////
+        /*  PWM channels and servos assignement  */
+        ///////////////////////////////////////////
+        /* PWM6 channel A => Servo 1 => Gripper  */
+        /* PWM7 channel B => Servo 4 => Base     */
+        ///////////////////////////////////////////
+
+        // Configure PWM for base control
+        let mut base_pwm = pwm_slices.pwm7;
+        base_pwm.set_ph_correct();
+        base_pwm.set_div_int(20u8); // 50 hz
+        base_pwm.enable();
+        let mut base = base_pwm.channel_b;
+        base.output_to(pins.servo_4);
+
+        // Configure PWM for gripper control
+        let mut gripper_pwm = pwm_slices.pwm6;
+        gripper_pwm.set_ph_correct();
+        gripper_pwm.set_div_int(20u8); // 50 hz
+        gripper_pwm.enable();
+        let mut gripper = gripper_pwm.channel_a;
+        gripper.output_to(pins.servo_1);
+
+        // Configure Gpio0 and Gpio1 as being I2C
+        let sda_pin = pins.grove_1_a.into_function::<gpio::FunctionI2C>();
+        let scl_pin = pins.grove_1_b.into_function::<gpio::FunctionI2C>();
+
+        // Init the I2C drive itself, using MaybeUninit to overwrite the previously
+        // uninitialized i2c_context variable without dropping its value
+        // (i2c_context defined in init local resources above)
+        let i2c_tmp: &'static mut _ = context.local.i2c_context.write(I2C::i2c0(
+            pac.I2C0,
+            sda_pin,
+            scl_pin,
+            400.kHz(),
+            &mut pac.RESETS,
+            &clocks.system_clock,
+        ));
+
+        let mono = Rp2040Mono::new(pac.TIMER);
+
+        accelerometer_reading::spawn().ok();
+        servos_control::spawn().ok();
+        base_control::spawn().ok();
+        gripper_control::spawn().ok();
+
+        (
+            Shared {
+                gripper_state: GripperState::CLOSED,
+                base_rotation: RotationDirection::NONE,
+            },
+            Local {
+                base,
+                gripper,
+                i2c: i2c_tmp,
+            },
+            init::Monotonics(mono)
+        )
+    }
+
+    #[task(local = [i2c], priority = 1)]
+    fn accelerometer_reading(context: accelerometer_reading::Context) {
+        context.local.i2c.write(0x2c, &[1, 2, 3]).unwrap();
+    }
+
+    #[task(local = [counter: u32 = 0], shared = [gripper_state, base_rotation], priority = 2)]
+    fn servos_control(mut context: servos_control::Context) {
+        context.shared.base_rotation.lock(|base_rotation| {
+            *base_rotation = RotationDirection::NONE;
+        });
+
+        if *context.local.counter % 100 == 0 {
+            context.shared.gripper_state.lock(|gripper_state| {
+                *gripper_state = GripperState::OPEN;
+            });
+            *context.local.counter = 0;
+        } else {
+            context.shared.gripper_state.lock(|gripper_state| {
+                *gripper_state = GripperState::CLOSED;
+            });
+        }
+
+        *context.local.counter += 1;
+
+        // Re-spawn this task after 10 ms
+        servos_control::spawn_after(duration_in_ticks(10 * ONE_MSEC_TICKS)).unwrap();
+    }
+
+    #[task(local = [gripper], shared = [gripper_state], priority = 1)]
+    fn gripper_control(mut context: gripper_control::Context) {
+        // Control the gripper
+        context.shared.gripper_state.lock(|gripper_state| {
+            match *gripper_state {
+                GripperState::OPEN => {
+                    defmt::info!("Open!");
+                    context.local.gripper.set_duty(5500);
+                },
+                GripperState::CLOSED => {
+                    defmt::info!("Close!");
+                    context.local.gripper.set_duty(2350);
+                }
+            }
+        });
+
+        // Re-spawn this task after 10 ms
+        gripper_control::spawn_after(duration_in_ticks(10 * ONE_MSEC_TICKS)).unwrap();
+    }
+
+    #[task(local = [base], shared = [base_rotation], priority = 1)]
+    fn base_control(mut context: base_control::Context) {
+        // Control the base
+        context.shared.base_rotation.lock(|base_rotation| {
+            match *base_rotation {
+                RotationDirection::COUNTERCLOCKWISE => {
+                    defmt::info!("Counter Clockwise!");
+                    context.local.base.set_duty(5500);
+                },
+                RotationDirection::CLOCKWISE => {
+                    defmt::info!("Clockwise!");
+                    context.local.base.set_duty(2350);
+                },
+                _ => {
+                    defmt::info!("Stop!");
+                    context.local.base.set_duty(4645); /* Counter clockwise limit: 4815, Clockwise limit: 4475 */
+                }
+            }
+        });
+
+        // Re-spawn this task after 10 ms
+        base_control::spawn_after(duration_in_ticks(10 * ONE_MSEC_TICKS)).unwrap();
     }
 }
 

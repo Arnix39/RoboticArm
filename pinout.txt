@@ -19,7 +19,7 @@ Motor 2		11
 Servo		12	PWM gripper servo	orange
 Servo		13	PWM left servo		orange
 Servo		14	PWM right servo		orange
-Serv		15	PWM rotation servo	orange
+Servo		15	PWM base servo	orange
 Grove 4		16
 Grove 4		17
 LEDs		18
