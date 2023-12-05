@@ -17,3 +17,4 @@ fugit = "0.3.7"
 
 cytron_maker_pi_rp2040 = "0.6.0"
 embedded-hal ="0.2.7"
+mpu6050 = "0.1.6"
