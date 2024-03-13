@@ -40,7 +40,7 @@ steps:
 - name: Upload binaries
   image: plugins/artifactory
   settings:
-    url: http://192.168.1.252/artifactory
+    url: ARTIFACTORY_PATH
     username:
       from_secret: ARTIFACTORY_USERNAME
     password:
