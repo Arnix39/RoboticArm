@@ -40,7 +40,8 @@ steps:
 - name: Upload binaries
   image: plugins/artifactory
   settings:
-    url: ARTIFACTORY_PATH
+    url: 
+      from_secret: ARTIFACTORY_PATH
     username:
       from_secret: ARTIFACTORY_USERNAME
     password:
@@ -77,7 +78,8 @@ steps:
 - name: Upload binaries
   image: plugins/artifactory
   settings:
-    url: http://192.168.1.252/artifactory
+    url: 
+      from_secret: ARTIFACTORY_PATH
     username:
       from_secret: ARTIFACTORY_USERNAME
     password:
@@ -92,5 +94,3 @@ steps:
 trigger:
   event:
   - promote
-  target:
-  - RoboticArm
