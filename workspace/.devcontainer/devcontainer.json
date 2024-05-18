@@ -1,15 +1,12 @@
 {
-    "name": "Rust Development Container",
+    "name": "Robotic Arm",
     "privileged": true,
     "remoteUser": "arnix",
     "build": {
-        "dockerfile": "Dockerfile",
-        "args": {
-            "USERNAME": "arnix"
-        }
+        "dockerfile": "Dockerfile"
     },
-    "workspaceFolder": "/home/workspace",
-    "workspaceMount": "source=${localWorkspaceFolder},target=/home/workspace,type=bind",
+    "workspaceFolder": "/home/arnix/src",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/home/arnix/src,type=bind",
     "customizations": {
         "vscode": {
             "extensions": [
@@ -26,10 +23,10 @@
             "type": "bind"
         },
         {
-            "source": "devcontainer-cargo-cache-${devcontainerId}",
+            "source": "cargo-cache-roboticarm-${devcontainerId}",
             "target": "/usr/local/cargo",
             "type": "volume"
         }
     ],
-    "postStartCommand": "bash /home/workspace/.devcontainer/postStart.bash"
+    "postStartCommand": "bash /home/arnix/src/.devcontainer/postStart.bash"
 }
